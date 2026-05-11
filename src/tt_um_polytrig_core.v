@@ -16,13 +16,30 @@ module tt_um_polytrig_core (
     input  wire       rst_n
 );
 
-  wire rst;
-  assign rst = ~rst_n;
+  wire        start;
+  wire        mode;
+  wire [7:0]  angle_in;
+  wire [7:0]  result_out;
+  wire        done;
 
-  assign uo_out  = 8'b0000_0000;
-  assign uio_out = 8'b0000_0000;
-  assign uio_oe  = 8'b0000_0000;
+  assign angle_in = ui_in;
+  assign start    = uio_in[0];
+  assign mode     = uio_in[1]; // 0 = sin, 1 = cos
 
-  wire _unused = &{ui_in, uio_in, ena, clk, rst, 1'b0};
+  polytrig_core core (
+      .clk        (clk),
+      .rst_n      (rst_n),
+      .start      (start),
+      .mode       (mode),
+      .angle_in   (angle_in),
+      .result_out (result_out),
+      .done       (done)
+  );
+
+  assign uo_out     = result_out;
+  assign uio_out    = {7'b0000000, done};
+  assign uio_oe     = 8'b0000_0001;
+
+  wire _unused = &{ena, uio_in[7:2], 1'b0};
 
 endmodule

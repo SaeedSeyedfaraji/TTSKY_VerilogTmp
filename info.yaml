@@ -12,7 +12,8 @@ project:
   top_module:  "tt_um_polytrig_core"
 
   source_files:
-    - "tt_um_polytrig_core.v"
+  - "tt_um_polytrig_core.v"
+  - "polytrig_core.v"
 
 pinout:
   # Inputs
