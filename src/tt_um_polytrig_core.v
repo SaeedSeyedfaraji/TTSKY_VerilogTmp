@@ -46,5 +46,3 @@ module tt_um_polytrig_core (
   wire _unused = &{ena, uio_in[7:2], 1'b0};
 
 endmodule
-
-`default_nettype wire

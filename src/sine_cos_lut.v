@@ -384,6 +384,3 @@ module sine_cos_lut (
     end
 
 endmodule
-
-`default_nettype wire
-```
