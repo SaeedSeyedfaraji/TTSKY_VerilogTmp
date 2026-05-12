@@ -13,7 +13,6 @@ project:
 
   source_files:
   - "tt_um_polytrig_core.v"
-  - "polytrig_core.v"
   - "sine_cos_lut.v"
 
 pinout:
