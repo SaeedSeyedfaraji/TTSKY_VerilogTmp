@@ -165,7 +165,7 @@ module sine_cos_lut (
     //
     //   delta * frac
     //
-    reg [8:0] interp_mul;
+    reg [6:0] interp_step;
 
     // Final unsigned magnitude before sign reconstruction
     //
@@ -470,13 +470,19 @@ module sine_cos_lut (
 
     always @(*) begin
 
-        delta      = y1 - y0;
-        interp_mul = delta * frac;
+    delta = y1 - y0;
 
-        if (quarter_pos == 6'd63)
-            mag = 7'd127;
-        else
-            mag = y0 + interp_mul[8:2];
+    case (frac)
+        2'd0: interp_step = 7'd0;
+        2'd1: interp_step = delta >> 2;
+        2'd2: interp_step = delta >> 1;
+        default: interp_step = (delta >> 1) + (delta >> 2);
+    endcase
+
+    if (quarter_pos == 6'd63)
+        mag = 7'd127;
+    else
+        mag = y0 + interp_step;
 
     end
 
