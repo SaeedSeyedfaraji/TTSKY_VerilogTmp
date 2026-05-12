@@ -24,22 +24,27 @@ module tt_um_polytrig_core (
 
   assign angle_in = ui_in;
   assign start    = uio_in[0];
-  assign mode     = uio_in[1]; // 0 = sin, 1 = cos
+  assign mode     = uio_in[1]; // 0 = sine, 1 = cosine
 
-  polytrig_core core (
-      .clk        (clk),
-      .rst_n      (rst_n),
-      .start      (start),
-      .mode       (mode),
-      .angle_in   (angle_in),
-      .result_out (result_out),
-      .done       (done)
+  sine_cos_lut core (
+      .clk    (clk),
+      .rst_n  (rst_n),
+      .start  (start),
+      .mode   (mode),
+      .phase  (angle_in),
+      .result (result_out),
+      .valid  (done)
   );
 
-  assign uo_out     = result_out;
-  assign uio_out    = {7'b0000000, done};
-  assign uio_oe     = 8'b0000_0001;
+  assign uo_out  = result_out;
+  assign uio_out = {7'b0000000, done};
+
+  // Only uio_out[0] is driven as output-valid/done.
+  // uio[7:1] remain input-only from the user side.
+  assign uio_oe  = 8'b0000_0001;
 
   wire _unused = &{ena, uio_in[7:2], 1'b0};
 
 endmodule
+
+`default_nettype wire
