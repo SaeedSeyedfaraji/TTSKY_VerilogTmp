@@ -6,7 +6,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, Timer
 
 
-async def apply_and_check(dut, phase, mode, expected, name):
+async def apply_and_check(dut, phase, mode, expected, name, tolerance=0):
     """
     Apply one sine/cosine transaction and check result.
 
@@ -21,7 +21,10 @@ async def apply_and_check(dut, phase, mode, expected, name):
       uio_out[0] = valid/done
     """
 
-    dut._log.info(f"Test {name}: phase={phase}, mode={mode}, expected={expected}")
+    dut._log.info(
+        f"Test {name}: phase={phase}, mode={mode}, "
+        f"expected={expected}, tolerance={tolerance}"
+    )
 
     dut.ui_in.value = phase
     dut.uio_in.value = (mode << 1) | 1  # start=1
@@ -29,7 +32,13 @@ async def apply_and_check(dut, phase, mode, expected, name):
     await ClockCycles(dut.clk, 5)
     await Timer(500, unit="ns")
 
-    assert int(dut.uo_out.value) == expected
+    actual = int(dut.uo_out.value)
+
+    assert abs(actual - expected) <= tolerance, (
+        f"{name} failed: phase={phase}, mode={mode}, "
+        f"expected={expected} ± {tolerance}, got={actual}"
+    )
+
     assert (int(dut.uio_out.value) & 1) == 1
 
     # Deassert start
@@ -43,10 +52,9 @@ async def apply_and_check(dut, phase, mode, expected, name):
 
 @cocotb.test()
 async def test_project(dut):
-    dut._log.info("Start PolyTrig sine/cosine LUT test")
+    dut._log.info("Start PolyTrig interpolated sine/cosine LUT test")
 
     # 100 MHz clock
-    # Also works better for gate-level simulation than the old 10 us clock.
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
@@ -77,6 +85,22 @@ async def test_project(dut):
     await apply_and_check(dut, phase=192, mode=0, expected=1,   name="sin 270 deg")
 
     # -------------------------------------------------
+    # Sine non-trivial interpolation points
+    #
+    # phase 21 ≈ 30°
+    # phase 32 = 45°
+    # phase 43 ≈ 60°
+    #
+    # Expected values use unsigned sine mapping:
+    #
+    #   output = 128 + round(127 * sin(angle))
+    # -------------------------------------------------
+
+    await apply_and_check(dut, phase=21, mode=0, expected=191, name="sin approx 30 deg", tolerance=3)
+    await apply_and_check(dut, phase=32, mode=0, expected=218, name="sin 45 deg",        tolerance=3)
+    await apply_and_check(dut, phase=43, mode=0, expected=238, name="sin approx 60 deg", tolerance=3)
+
+    # -------------------------------------------------
     # Cosine key points
     # cos(x) = sin(x + 90°)
     #
@@ -90,3 +114,11 @@ async def test_project(dut):
     await apply_and_check(dut, phase=64,  mode=1, expected=128, name="cos 90 deg")
     await apply_and_check(dut, phase=128, mode=1, expected=1,   name="cos 180 deg")
     await apply_and_check(dut, phase=192, mode=1, expected=128, name="cos 270 deg")
+
+    # -------------------------------------------------
+    # Cosine non-trivial interpolation points
+    # -------------------------------------------------
+
+    await apply_and_check(dut, phase=21, mode=1, expected=238, name="cos approx 30 deg", tolerance=3)
+    await apply_and_check(dut, phase=32, mode=1, expected=218, name="cos 45 deg",        tolerance=3)
+    await apply_and_check(dut, phase=43, mode=1, expected=191, name="cos approx 60 deg", tolerance=3)
