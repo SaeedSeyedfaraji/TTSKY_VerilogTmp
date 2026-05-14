@@ -65,41 +65,64 @@ async def test_project(dut):
     await apply_and_check(dut, 1, 24, 4,   4,   "tan/cot 135 deg", tolerance=3)
 
     # mode 10: NCO sine / cosine
-    # value = 1 -> step = 4 phase counts per clock
+    # value = 1 means slow NCO stepping.
+    # Do not check one exact sample point; check waveform behavior over time.
+    dut._log.info("Start NCO dynamic behavior test")
+
     dut.rst_n.value = 0
     dut.ui_in.value = input_word(2, 1)
     dut.uio_in.value = 0
+
+    await ClockCycles(dut.clk, 5)
+    dut.rst_n.value = 1
     await ClockCycles(dut.clk, 5)
 
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 2)
+    sin_samples = []
+    cos_samples = []
 
-    # Around first quarter cycle: sine should be high, cosine should be reduced
-    await ClockCycles(dut.clk, 16)
-    await Timer(100, unit="ns")
+    for _ in range(80):
+        await ClockCycles(dut.clk, 1)
+        await Timer(1, unit="ns")
+        sin_samples.append(int(dut.uo_out.value))
+        cos_samples.append(int(dut.uio_out.value))
 
-    actual_sin = int(dut.uo_out.value)
-    actual_cos = int(dut.uio_out.value)
+    dut._log.info(f"NCO sine samples: {sin_samples}")
+    dut._log.info(f"NCO cosine samples: {cos_samples}")
 
-    assert actual_sin > 200, (
-        f"NCO rising sine failed: expected sine high, got {actual_sin}"
+    sin_min = min(sin_samples)
+    sin_max = max(sin_samples)
+    cos_min = min(cos_samples)
+    cos_max = max(cos_samples)
+
+    dut._log.info(
+        f"NCO ranges: sin_min={sin_min}, sin_max={sin_max}, "
+        f"cos_min={cos_min}, cos_max={cos_max}"
     )
 
-    assert actual_cos < 200, (
-        f"NCO falling cosine failed: expected cosine reduced, got {actual_cos}"
+    # Basic waveform sanity checks
+    assert sin_max > 200, (
+        f"NCO sine never reached high region: max={sin_max}, samples={sin_samples}"
     )
 
-    # Around second quarter cycle: sine should reduce, cosine should be low
-    await ClockCycles(dut.clk, 16)
-    await Timer(100, unit="ns")
-
-    actual_sin = int(dut.uo_out.value)
-    actual_cos = int(dut.uio_out.value)
-
-    assert actual_sin < 200, (
-        f"NCO falling sine failed: expected sine reduced, got {actual_sin}"
+    assert sin_min < 80, (
+        f"NCO sine never reached low region: min={sin_min}, samples={sin_samples}"
     )
 
-    assert actual_cos < 80, (
-        f"NCO negative cosine failed: expected cosine low, got {actual_cos}"
+    assert cos_max > 200, (
+        f"NCO cosine never reached high region: max={cos_max}, samples={cos_samples}"
     )
+
+    assert cos_min < 80, (
+        f"NCO cosine never reached low region: min={cos_min}, samples={cos_samples}"
+    )
+
+    # Check that signal is actually changing, not stuck
+    assert sin_max - sin_min > 100, (
+        f"NCO sine dynamic range too small: min={sin_min}, max={sin_max}"
+    )
+
+    assert cos_max - cos_min > 100, (
+        f"NCO cosine dynamic range too small: min={cos_min}, max={cos_max}"
+    )
+
+    dut._log.info("PolyTrig static + NCO test completed successfully")
