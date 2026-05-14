@@ -178,4 +178,82 @@ module tan_lut_core (
 
 endmodule
 
+module cot_lut_core (
+    input  wire [7:0] phase,
+    output reg  [7:0] result
+);
+
+    reg [1:0] quadrant;
+    reg [5:0] index;
+    reg [5:0] quarter_pos;
+    reg [6:0] mag;
+    reg       negative;
+
+    always @(*) begin
+        quadrant = phase[7:6];
+        index    = phase[5:0];
+
+        // cot sign:
+        // Q0 positive
+        // Q1 negative
+        // Q2 positive
+        // Q3 negative
+        negative = quadrant[0];
+
+        // cot magnitude:
+        // large near 0/180 deg
+        // zero near 90/270 deg
+        if (quadrant[0])
+            quarter_pos = index;
+        else
+            quarter_pos = 6'd63 - index;
+    end
+
+    always @(*) begin
+        case (quarter_pos)
+            6'd0:  mag = 7'd0;
+            6'd1:  mag = 7'd3;
+            6'd2:  mag = 7'd6;
+            6'd3:  mag = 7'd10;
+            6'd4:  mag = 7'd13;
+            6'd5:  mag = 7'd16;
+            6'd6:  mag = 7'd19;
+            6'd7:  mag = 7'd22;
+            6'd8:  mag = 7'd26;
+            6'd9:  mag = 7'd29;
+            6'd10: mag = 7'd32;
+            6'd11: mag = 7'd36;
+            6'd12: mag = 7'd39;
+            6'd13: mag = 7'd43;
+            6'd14: mag = 7'd46;
+            6'd15: mag = 7'd50;
+            6'd16: mag = 7'd54;
+            6'd17: mag = 7'd57;
+            6'd18: mag = 7'd61;
+            6'd19: mag = 7'd65;
+            6'd20: mag = 7'd69;
+            6'd21: mag = 7'd73;
+            6'd22: mag = 7'd78;
+            6'd23: mag = 7'd82;
+            6'd24: mag = 7'd87;
+            6'd25: mag = 7'd91;
+            6'd26: mag = 7'd96;
+            6'd27: mag = 7'd101;
+            6'd28: mag = 7'd107;
+            6'd29: mag = 7'd112;
+            6'd30: mag = 7'd118;
+            6'd31: mag = 7'd124;
+            default: mag = 7'd127;
+        endcase
+    end
+
+    always @(*) begin
+        if (negative)
+            result = 8'd128 - {1'b0, mag};
+        else
+            result = 8'd128 + {1'b0, mag};
+    end
+
+endmodule
+
 `default_nettype wire

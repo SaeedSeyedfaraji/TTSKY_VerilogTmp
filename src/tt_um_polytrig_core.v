@@ -45,10 +45,10 @@ module tt_um_polytrig_core (
       .result (tan_out)
   );
 
-    tan_lut_core cot_core (
-      .phase  (phase + 8'd64),
-      .result (cot_out)
-  );
+  cot_lut_core cot_core (
+    .phase  (phase),
+    .result (cot_out)
+    );
 
   // mode 0: sine / cosine
   // mode 1: tangent / cotangent
