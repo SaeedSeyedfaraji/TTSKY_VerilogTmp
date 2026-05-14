@@ -16,10 +16,12 @@ module tt_um_polytrig_core (
 
     wire [1:0] nco_waveform = uio_in[1:0];
     wire [1:0] nco_amp      = uio_in[3:2];
+    wire [3:0] unused_uio_in = uio_in[7:4];
 
     reg [5:0] nco_phase;
 
-    wire [5:0] nco_step = value << 2;
+    wire [5:0] nco_step    = value << 2;
+    wire [5:0] nco_phase_q = nco_phase + 6'd16;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -67,7 +69,7 @@ module tt_um_polytrig_core (
     );
 
     sine_cos_lut nco_cos_core (
-        .phase(nco_phase + 6'd16),
+        .phase(nco_phase_q),
         .func_sel(2'b00),
         .out(nco_cos)
     );
@@ -100,13 +102,17 @@ module tt_um_polytrig_core (
 
     function [7:0] triangle_wave;
         input [5:0] phase;
+        reg [8:0] tmp;
         begin
-            if (phase < 6'd16)
-                triangle_wave = 8'd128 + {phase[4:0], 3'b000};
-            else if (phase < 6'd48)
-                triangle_wave = 8'd255 - {(phase - 6'd16), 3'b000};
-            else
-                triangle_wave = 8'd1 + {(phase - 6'd48), 3'b000};
+            if (phase < 6'd16) begin
+                tmp = 9'd128 + {1'b0, phase[4:0], 3'b000};
+            end else if (phase < 6'd48) begin
+                tmp = 9'd255 - {1'b0, (phase - 6'd16), 3'b000};
+            end else begin
+                tmp = 9'd1 + {1'b0, (phase - 6'd48), 3'b000};
+            end
+
+            triangle_wave = tmp[7:0];
         end
     endfunction
 
@@ -118,28 +124,30 @@ module tt_um_polytrig_core (
     endfunction
 
     function [7:0] square_wave;
-        input [5:0] phase;
+        input phase_msb;
         begin
-            square_wave = phase[5] ? 8'd1 : 8'd255;
+            square_wave = phase_msb ? 8'd1 : 8'd255;
         end
     endfunction
 
     function [7:0] rectified_sine;
         input [7:0] x;
         reg signed [9:0] delta;
-        reg [8:0] abs_delta;
-        reg [9:0] doubled;
+        reg signed [10:0] abs_tmp;
+        reg [9:0] abs_delta;
+        reg [10:0] doubled;
         begin
             delta = $signed({2'b00, x}) - 10'sd128;
 
             if (delta < 0)
-                abs_delta = -delta;
+                abs_tmp = -$signed({delta[9], delta});
             else
-                abs_delta = delta;
+                abs_tmp = $signed({delta[9], delta});
 
+            abs_delta = abs_tmp[9:0];
             doubled = {1'b0, abs_delta} << 1;
 
-            if (doubled > 10'd255)
+            if (doubled > 11'd255)
                 rectified_sine = 8'd255;
             else
                 rectified_sine = doubled[7:0];
@@ -162,8 +170,8 @@ module tt_um_polytrig_core (
             end
 
             2'b10: begin
-                nco_a_raw = square_wave(nco_phase);
-                nco_b_raw = square_wave(nco_phase + 6'd16);
+                nco_a_raw = square_wave(nco_phase[5]);
+                nco_b_raw = square_wave(nco_phase_q[5]);
             end
 
             default: begin
@@ -198,7 +206,7 @@ module tt_um_polytrig_core (
 
             default: begin
                 out_a = {2'b00, value};
-                out_b = {nco_waveform, nco_amp, value[3:0]};
+                out_b = {unused_uio_in, value[3:0]};
             end
         endcase
     end
