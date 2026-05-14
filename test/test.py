@@ -65,6 +65,12 @@ async def test_project(dut):
     await apply_and_check(dut, 1, 16, 1,   128, "tan/cot 90 deg")
     await apply_and_check(dut, 1, 24, 4,   4,   "tan/cot 135 deg", tolerance=3)
 
+        # Reset NCO phase before oscillator test
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 3)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 1)
+    
     # mode 10: NCO sine / cosine
     # value = 1 -> step = 4 phase counts per clock
     dut.ui_in.value = input_word(2, 1)
