@@ -1,257 +1,150 @@
 `default_nettype none
 
-module sine_lut_core (
-    input  wire [7:0] phase,
-    output reg  [7:0] result
+module sine_cos_lut (
+    input  wire [5:0] phase,
+    input  wire [1:0] func_sel,
+    output reg  [7:0] out
 );
 
-    reg [1:0] quadrant;
-    reg [5:0] index;
-    reg [5:0] quarter_pos;
-    reg [6:0] mag;
-    reg       negative;
+    function [7:0] sin_quarter;
+        input [3:0] idx;
+        begin
+            case (idx)
+                4'd0:  sin_quarter = 8'd128;
+                4'd1:  sin_quarter = 8'd140;
+                4'd2:  sin_quarter = 8'd153;
+                4'd3:  sin_quarter = 8'd165;
+                4'd4:  sin_quarter = 8'd177;
+                4'd5:  sin_quarter = 8'd189;
+                4'd6:  sin_quarter = 8'd200;
+                4'd7:  sin_quarter = 8'd211;
+                4'd8:  sin_quarter = 8'd221;
+                4'd9:  sin_quarter = 8'd230;
+                4'd10: sin_quarter = 8'd238;
+                4'd11: sin_quarter = 8'd245;
+                4'd12: sin_quarter = 8'd250;
+                4'd13: sin_quarter = 8'd253;
+                4'd14: sin_quarter = 8'd255;
+                4'd15: sin_quarter = 8'd255;
+                default: sin_quarter = 8'd255;
+            endcase
+        end
+    endfunction
 
-    always @(*) begin
-        quadrant = phase[7:6];
-        index    = phase[5:0];
+    function [7:0] sine_value;
+        input [5:0] p;
+        reg [1:0] quadrant;
+        reg [3:0] idx;
+        reg [7:0] qval;
+        begin
+            quadrant = p[5:4];
+            idx = p[3:0];
 
-        case (quadrant)
-            2'b00: begin
-                quarter_pos = index;
-                negative    = 1'b0;
+            case (quadrant)
+                2'b00: begin
+                    qval = sin_quarter(idx);
+                    sine_value = qval;
+                end
+
+                2'b01: begin
+                    qval = sin_quarter(4'd15 - idx);
+                    sine_value = qval;
+                end
+
+                2'b10: begin
+                    qval = sin_quarter(idx);
+                    sine_value = 8'd256 - qval;
+                end
+
+                default: begin
+                    qval = sin_quarter(4'd15 - idx);
+                    sine_value = 8'd256 - qval;
+                end
+            endcase
+        end
+    endfunction
+
+    function [7:0] tan_value;
+        input [5:0] p;
+        reg [3:0] idx;
+        begin
+            idx = p[3:0];
+
+            if (p == 6'd0)
+                tan_value = 8'd128;
+            else if (p == 6'd8)
+                tan_value = 8'd255;
+            else if (p == 6'd16)
+                tan_value = 8'd1;
+            else if (p == 6'd24)
+                tan_value = 8'd4;
+            else begin
+                case (idx)
+                    4'd0:  tan_value = p[4] ? 8'd1 : 8'd128;
+                    4'd1:  tan_value = p[4] ? 8'd4 : 8'd140;
+                    4'd2:  tan_value = p[4] ? 8'd8 : 8'd153;
+                    4'd3:  tan_value = p[4] ? 8'd16 : 8'd166;
+                    4'd4:  tan_value = p[4] ? 8'd32 : 8'd181;
+                    4'd5:  tan_value = p[4] ? 8'd48 : 8'd197;
+                    4'd6:  tan_value = p[4] ? 8'd70 : 8'd216;
+                    4'd7:  tan_value = p[4] ? 8'd96 : 8'd235;
+                    4'd8:  tan_value = p[4] ? 8'd128 : 8'd255;
+                    4'd9:  tan_value = p[4] ? 8'd160 : 8'd235;
+                    4'd10: tan_value = p[4] ? 8'd186 : 8'd216;
+                    4'd11: tan_value = p[4] ? 8'd208 : 8'd197;
+                    4'd12: tan_value = p[4] ? 8'd224 : 8'd181;
+                    4'd13: tan_value = p[4] ? 8'd240 : 8'd166;
+                    4'd14: tan_value = p[4] ? 8'd248 : 8'd153;
+                    default: tan_value = p[4] ? 8'd252 : 8'd140;
+                endcase
             end
+        end
+    endfunction
 
-            2'b01: begin
-                quarter_pos = 6'd63 - index;
-                negative    = 1'b0;
+    function [7:0] cot_value;
+        input [5:0] p;
+        reg [3:0] idx;
+        begin
+            idx = p[3:0];
+
+            if (p == 6'd0)
+                cot_value = 8'd255;
+            else if (p == 6'd8)
+                cot_value = 8'd252;
+            else if (p == 6'd16)
+                cot_value = 8'd128;
+            else if (p == 6'd24)
+                cot_value = 8'd4;
+            else begin
+                case (idx)
+                    4'd0:  cot_value = p[4] ? 8'd128 : 8'd255;
+                    4'd1:  cot_value = p[4] ? 8'd116 : 8'd252;
+                    4'd2:  cot_value = p[4] ? 8'd103 : 8'd248;
+                    4'd3:  cot_value = p[4] ? 8'd90  : 8'd240;
+                    4'd4:  cot_value = p[4] ? 8'd76  : 8'd224;
+                    4'd5:  cot_value = p[4] ? 8'd60  : 8'd208;
+                    4'd6:  cot_value = p[4] ? 8'd40  : 8'd186;
+                    4'd7:  cot_value = p[4] ? 8'd20  : 8'd160;
+                    4'd8:  cot_value = p[4] ? 8'd4   : 8'd252;
+                    4'd9:  cot_value = p[4] ? 8'd20  : 8'd235;
+                    4'd10: cot_value = p[4] ? 8'd40  : 8'd216;
+                    4'd11: cot_value = p[4] ? 8'd60  : 8'd197;
+                    4'd12: cot_value = p[4] ? 8'd76  : 8'd181;
+                    4'd13: cot_value = p[4] ? 8'd90  : 8'd166;
+                    4'd14: cot_value = p[4] ? 8'd103 : 8'd153;
+                    default: cot_value = p[4] ? 8'd116 : 8'd140;
+                endcase
             end
+        end
+    endfunction
 
-            2'b10: begin
-                quarter_pos = index;
-                negative    = 1'b1;
-            end
-
-            default: begin
-                quarter_pos = 6'd63 - index;
-                negative    = 1'b1;
-            end
+    always @(*) begin
+        case (func_sel)
+            2'b00: out = sine_value(phase);
+            2'b01: out = tan_value(phase);
+            2'b10: out = cot_value(phase);
+            default: out = 8'd0;
         endcase
-    end
-
-    always @(*) begin
-        case (quarter_pos)
-            6'd0:  mag = 7'd0;
-            6'd1:  mag = 7'd3;
-            6'd2:  mag = 7'd6;
-            6'd3:  mag = 7'd9;
-            6'd4:  mag = 7'd12;
-            6'd5:  mag = 7'd16;
-            6'd6:  mag = 7'd19;
-            6'd7:  mag = 7'd22;
-            6'd8:  mag = 7'd25;
-            6'd9:  mag = 7'd28;
-            6'd10: mag = 7'd31;
-            6'd11: mag = 7'd34;
-            6'd12: mag = 7'd37;
-            6'd13: mag = 7'd40;
-            6'd14: mag = 7'd43;
-            6'd15: mag = 7'd46;
-            6'd16: mag = 7'd49;
-            6'd17: mag = 7'd52;
-            6'd18: mag = 7'd55;
-            6'd19: mag = 7'd58;
-            6'd20: mag = 7'd61;
-            6'd21: mag = 7'd64;
-            6'd22: mag = 7'd67;
-            6'd23: mag = 7'd70;
-            6'd24: mag = 7'd73;
-            6'd25: mag = 7'd75;
-            6'd26: mag = 7'd78;
-            6'd27: mag = 7'd81;
-            6'd28: mag = 7'd83;
-            6'd29: mag = 7'd86;
-            6'd30: mag = 7'd88;
-            6'd31: mag = 7'd91;
-            6'd32: mag = 7'd93;
-            6'd33: mag = 7'd95;
-            6'd34: mag = 7'd98;
-            6'd35: mag = 7'd100;
-            6'd36: mag = 7'd102;
-            6'd37: mag = 7'd104;
-            6'd38: mag = 7'd106;
-            6'd39: mag = 7'd108;
-            6'd40: mag = 7'd110;
-            6'd41: mag = 7'd112;
-            6'd42: mag = 7'd113;
-            6'd43: mag = 7'd115;
-            6'd44: mag = 7'd117;
-            6'd45: mag = 7'd118;
-            6'd46: mag = 7'd120;
-            6'd47: mag = 7'd121;
-            6'd48: mag = 7'd122;
-            6'd49: mag = 7'd123;
-            6'd50: mag = 7'd124;
-            6'd51: mag = 7'd125;
-            6'd52: mag = 7'd126;
-            6'd53: mag = 7'd126;
-            default: mag = 7'd127;
-        endcase
-    end
-
-    always @(*) begin
-        if (negative)
-            result = 8'd128 - {1'b0, mag};
-        else
-            result = 8'd128 + {1'b0, mag};
-    end
-
-endmodule
-
-
-module tan_lut_core (
-    input  wire [7:0] phase,
-    output reg  [7:0] result
-);
-
-    reg [1:0] quadrant;
-    reg [5:0] index;
-    reg [5:0] quarter_pos;
-    reg [6:0] mag;
-    reg       negative;
-
-    always @(*) begin
-        quadrant = phase[7:6];
-        index    = phase[5:0];
-
-        negative = quadrant[0];
-
-        if (quadrant[0])
-            quarter_pos = 6'd63 - index;
-        else
-            quarter_pos = index;
-    end
-
-    always @(*) begin
-        case (quarter_pos)
-            6'd0:  mag = 7'd0;
-            6'd1:  mag = 7'd3;
-            6'd2:  mag = 7'd6;
-            6'd3:  mag = 7'd10;
-            6'd4:  mag = 7'd13;
-            6'd5:  mag = 7'd16;
-            6'd6:  mag = 7'd19;
-            6'd7:  mag = 7'd22;
-            6'd8:  mag = 7'd26;
-            6'd9:  mag = 7'd29;
-            6'd10: mag = 7'd32;
-            6'd11: mag = 7'd36;
-            6'd12: mag = 7'd39;
-            6'd13: mag = 7'd43;
-            6'd14: mag = 7'd46;
-            6'd15: mag = 7'd50;
-            6'd16: mag = 7'd54;
-            6'd17: mag = 7'd57;
-            6'd18: mag = 7'd61;
-            6'd19: mag = 7'd65;
-            6'd20: mag = 7'd69;
-            6'd21: mag = 7'd73;
-            6'd22: mag = 7'd78;
-            6'd23: mag = 7'd82;
-            6'd24: mag = 7'd87;
-            6'd25: mag = 7'd91;
-            6'd26: mag = 7'd96;
-            6'd27: mag = 7'd101;
-            6'd28: mag = 7'd107;
-            6'd29: mag = 7'd112;
-            6'd30: mag = 7'd118;
-            6'd31: mag = 7'd124;
-            default: mag = 7'd127;
-        endcase
-    end
-
-    always @(*) begin
-        if (negative)
-            result = 8'd128 - {1'b0, mag};
-        else
-            result = 8'd128 + {1'b0, mag};
-    end
-
-endmodule
-
-module cot_lut_core (
-    input  wire [7:0] phase,
-    output reg  [7:0] result
-);
-
-    reg [1:0] quadrant;
-    reg [5:0] index;
-    reg [5:0] quarter_pos;
-    reg [6:0] mag;
-    reg       negative;
-
-    always @(*) begin
-        quadrant = phase[7:6];
-        index    = phase[5:0];
-
-        // cot sign:
-        // Q0 positive
-        // Q1 negative
-        // Q2 positive
-        // Q3 negative
-        negative = quadrant[0];
-
-        // cot magnitude:
-        // large near 0/180 deg
-        // zero near 90/270 deg
-        if (quadrant[0])
-            quarter_pos = index;
-        else
-            quarter_pos = 6'd63 - index;
-    end
-
-    always @(*) begin
-        case (quarter_pos)
-            6'd0:  mag = 7'd0;
-            6'd1:  mag = 7'd3;
-            6'd2:  mag = 7'd6;
-            6'd3:  mag = 7'd10;
-            6'd4:  mag = 7'd13;
-            6'd5:  mag = 7'd16;
-            6'd6:  mag = 7'd19;
-            6'd7:  mag = 7'd22;
-            6'd8:  mag = 7'd26;
-            6'd9:  mag = 7'd29;
-            6'd10: mag = 7'd32;
-            6'd11: mag = 7'd36;
-            6'd12: mag = 7'd39;
-            6'd13: mag = 7'd43;
-            6'd14: mag = 7'd46;
-            6'd15: mag = 7'd50;
-            6'd16: mag = 7'd54;
-            6'd17: mag = 7'd57;
-            6'd18: mag = 7'd61;
-            6'd19: mag = 7'd65;
-            6'd20: mag = 7'd69;
-            6'd21: mag = 7'd73;
-            6'd22: mag = 7'd78;
-            6'd23: mag = 7'd82;
-            6'd24: mag = 7'd87;
-            6'd25: mag = 7'd91;
-            6'd26: mag = 7'd96;
-            6'd27: mag = 7'd101;
-            6'd28: mag = 7'd107;
-            6'd29: mag = 7'd112;
-            6'd30: mag = 7'd118;
-            6'd31: mag = 7'd124;
-            default: mag = 7'd127;
-        endcase
-    end
-
-    always @(*) begin
-        if (negative)
-            result = 8'd128 - {1'b0, mag};
-        else
-            result = 8'd128 + {1'b0, mag};
     end
 
 endmodule

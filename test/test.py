@@ -34,9 +34,45 @@ async def apply_and_check(dut, mode, value, expected_a, expected_b, name, tolera
     )
 
 
+async def collect_nco_samples(dut, waveform, amp, cycles=80):
+    dut.rst_n.value = 0
+    dut.ui_in.value = input_word(2, 1)
+    dut.uio_in.value = ((amp & 0x3) << 2) | (waveform & 0x3)
+
+    await ClockCycles(dut.clk, 5)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 5)
+
+    samples_a = []
+    samples_b = []
+
+    for _ in range(cycles):
+        await ClockCycles(dut.clk, 1)
+        await Timer(1, unit="ns")
+        samples_a.append(int(dut.uo_out.value))
+        samples_b.append(int(dut.uio_out.value))
+
+    dut._log.info(
+        f"NCO waveform={waveform}, amp={amp}, "
+        f"A samples={samples_a}, B samples={samples_b}"
+    )
+
+    return samples_a, samples_b
+
+
+def check_dynamic_range(samples, name, min_range=80):
+    s_min = min(samples)
+    s_max = max(samples)
+
+    assert s_max > s_min, f"{name} is stuck: samples={samples}"
+    assert s_max - s_min >= min_range, (
+        f"{name} dynamic range too small: min={s_min}, max={s_max}, samples={samples}"
+    )
+
+
 @cocotb.test()
 async def test_project(dut):
-    dut._log.info("Start PolyTrig static + NCO test")
+    dut._log.info("Start PolyTrig static + programmable NCO test")
 
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
@@ -64,65 +100,70 @@ async def test_project(dut):
     await apply_and_check(dut, 1, 16, 1,   128, "tan/cot 90 deg")
     await apply_and_check(dut, 1, 24, 4,   4,   "tan/cot 135 deg", tolerance=3)
 
-    # mode 10: NCO sine / cosine
-    # value = 1 means slow NCO stepping.
-    # Do not check one exact sample point; check waveform behavior over time.
-    dut._log.info("Start NCO dynamic behavior test")
+    # mode 10: NCO sine/cosine, full amplitude
+    sin_samples, cos_samples = await collect_nco_samples(
+        dut, waveform=0, amp=0, cycles=80
+    )
 
-    dut.rst_n.value = 0
-    dut.ui_in.value = input_word(2, 1)
-    dut.uio_in.value = 0
+    assert max(sin_samples) > 200, "NCO sine did not reach high region"
+    assert min(sin_samples) < 80,  "NCO sine did not reach low region"
+    assert max(cos_samples) > 200, "NCO cosine did not reach high region"
+    assert min(cos_samples) < 80,  "NCO cosine did not reach low region"
 
-    await ClockCycles(dut.clk, 5)
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 5)
+    check_dynamic_range(sin_samples, "NCO sine", min_range=120)
+    check_dynamic_range(cos_samples, "NCO cosine", min_range=120)
 
-    sin_samples = []
-    cos_samples = []
+    # waveform 01: triangle / saw
+    tri_samples, saw_samples = await collect_nco_samples(
+        dut, waveform=1, amp=0, cycles=80
+    )
 
-    for _ in range(80):
-        await ClockCycles(dut.clk, 1)
-        await Timer(1, unit="ns")
-        sin_samples.append(int(dut.uo_out.value))
-        cos_samples.append(int(dut.uio_out.value))
+    check_dynamic_range(tri_samples, "NCO triangle", min_range=120)
+    check_dynamic_range(saw_samples, "NCO saw", min_range=120)
 
-    dut._log.info(f"NCO sine samples: {sin_samples}")
-    dut._log.info(f"NCO cosine samples: {cos_samples}")
+    # waveform 10: square / quadrature square
+    sq_a_samples, sq_b_samples = await collect_nco_samples(
+        dut, waveform=2, amp=0, cycles=80
+    )
 
-    sin_min = min(sin_samples)
-    sin_max = max(sin_samples)
-    cos_min = min(cos_samples)
-    cos_max = max(cos_samples)
+    assert max(sq_a_samples) >= 240 and min(sq_a_samples) <= 20, (
+        f"NCO square A failed: samples={sq_a_samples}"
+    )
+
+    assert max(sq_b_samples) >= 240 and min(sq_b_samples) <= 20, (
+        f"NCO square B failed: samples={sq_b_samples}"
+    )
+
+    # waveform 11: rectified sine/cosine
+    rect_a_samples, rect_b_samples = await collect_nco_samples(
+        dut, waveform=3, amp=0, cycles=80
+    )
+
+    check_dynamic_range(rect_a_samples, "NCO rectified sine", min_range=100)
+    check_dynamic_range(rect_b_samples, "NCO rectified cosine", min_range=100)
+
+    # amplitude check: same sine/cos NCO but reduced amplitude
+    full_amp_samples, _ = await collect_nco_samples(
+        dut, waveform=0, amp=0, cycles=80
+    )
+
+    half_amp_samples, _ = await collect_nco_samples(
+        dut, waveform=0, amp=2, cycles=80
+    )
+
+    full_range = max(full_amp_samples) - min(full_amp_samples)
+    half_range = max(half_amp_samples) - min(half_amp_samples)
 
     dut._log.info(
-        f"NCO ranges: sin_min={sin_min}, sin_max={sin_max}, "
-        f"cos_min={cos_min}, cos_max={cos_max}"
+        f"Amplitude check: full_range={full_range}, half_range={half_range}"
     )
 
-    # Basic waveform sanity checks
-    assert sin_max > 200, (
-        f"NCO sine never reached high region: max={sin_max}, samples={sin_samples}"
+    assert half_range < full_range, (
+        f"Amplitude scaling failed: full_range={full_range}, half_range={half_range}"
     )
 
-    assert sin_min < 80, (
-        f"NCO sine never reached low region: min={sin_min}, samples={sin_samples}"
+    assert half_range > 40, (
+        f"Half amplitude range too small: half_range={half_range}"
     )
 
-    assert cos_max > 200, (
-        f"NCO cosine never reached high region: max={cos_max}, samples={cos_samples}"
-    )
-
-    assert cos_min < 80, (
-        f"NCO cosine never reached low region: min={cos_min}, samples={cos_samples}"
-    )
-
-    # Check that signal is actually changing, not stuck
-    assert sin_max - sin_min > 100, (
-        f"NCO sine dynamic range too small: min={sin_min}, max={sin_max}"
-    )
-
-    assert cos_max - cos_min > 100, (
-        f"NCO cosine dynamic range too small: min={cos_min}, max={cos_max}"
-    )
-
-    dut._log.info("PolyTrig static + NCO test completed successfully")
+    dut._log.info("PolyTrig static + programmable NCO test completed successfully")
