@@ -40,6 +40,7 @@ async def collect_nco_samples(dut, waveform, amp, cycles=80):
     dut.uio_in.value = ((amp & 0x3) << 2) | (waveform & 0x3)
 
     await ClockCycles(dut.clk, 5)
+
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 5)
 
@@ -65,6 +66,7 @@ def check_dynamic_range(samples, name, min_range=80):
     s_max = max(samples)
 
     assert s_max > s_min, f"{name} is stuck: samples={samples}"
+
     assert s_max - s_min >= min_range, (
         f"{name} dynamic range too small: min={s_min}, max={s_max}, samples={samples}"
     )
@@ -83,6 +85,7 @@ async def test_project(dut):
     dut.rst_n.value = 0
 
     await ClockCycles(dut.clk, 10)
+
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 5)
     await Timer(100, unit="ns")
@@ -142,7 +145,7 @@ async def test_project(dut):
     check_dynamic_range(rect_a_samples, "NCO rectified sine", min_range=100)
     check_dynamic_range(rect_b_samples, "NCO rectified cosine", min_range=100)
 
-    # amplitude check: same sine/cos NCO but reduced amplitude
+    # amplitude check
     full_amp_samples, _ = await collect_nco_samples(
         dut, waveform=0, amp=0, cycles=80
     )

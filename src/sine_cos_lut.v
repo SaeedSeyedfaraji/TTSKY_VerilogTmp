@@ -6,27 +6,28 @@ module sine_cos_lut (
     output reg  [7:0] out
 );
 
-    function [7:0] sin_quarter;
-        input [3:0] idx;
+    function [7:0] sin_quarter_ext;
+        input [4:0] idx;
         begin
             case (idx)
-                4'd0:  sin_quarter = 8'd128;
-                4'd1:  sin_quarter = 8'd140;
-                4'd2:  sin_quarter = 8'd153;
-                4'd3:  sin_quarter = 8'd165;
-                4'd4:  sin_quarter = 8'd177;
-                4'd5:  sin_quarter = 8'd189;
-                4'd6:  sin_quarter = 8'd200;
-                4'd7:  sin_quarter = 8'd211;
-                4'd8:  sin_quarter = 8'd221;
-                4'd9:  sin_quarter = 8'd230;
-                4'd10: sin_quarter = 8'd238;
-                4'd11: sin_quarter = 8'd245;
-                4'd12: sin_quarter = 8'd250;
-                4'd13: sin_quarter = 8'd253;
-                4'd14: sin_quarter = 8'd255;
-                4'd15: sin_quarter = 8'd255;
-                default: sin_quarter = 8'd255;
+                5'd0:  sin_quarter_ext = 8'd128;
+                5'd1:  sin_quarter_ext = 8'd140;
+                5'd2:  sin_quarter_ext = 8'd153;
+                5'd3:  sin_quarter_ext = 8'd165;
+                5'd4:  sin_quarter_ext = 8'd177;
+                5'd5:  sin_quarter_ext = 8'd189;
+                5'd6:  sin_quarter_ext = 8'd200;
+                5'd7:  sin_quarter_ext = 8'd211;
+                5'd8:  sin_quarter_ext = 8'd221;
+                5'd9:  sin_quarter_ext = 8'd230;
+                5'd10: sin_quarter_ext = 8'd238;
+                5'd11: sin_quarter_ext = 8'd245;
+                5'd12: sin_quarter_ext = 8'd250;
+                5'd13: sin_quarter_ext = 8'd253;
+                5'd14: sin_quarter_ext = 8'd255;
+                5'd15: sin_quarter_ext = 8'd255;
+                5'd16: sin_quarter_ext = 8'd255;
+                default: sin_quarter_ext = 8'd255;
             endcase
         end
     endfunction
@@ -36,29 +37,32 @@ module sine_cos_lut (
         reg [1:0] quadrant;
         reg [3:0] idx;
         reg [7:0] qval;
+        reg [8:0] invval;
         begin
             quadrant = p[5:4];
             idx = p[3:0];
 
             case (quadrant)
                 2'b00: begin
-                    qval = sin_quarter(idx);
+                    qval = sin_quarter_ext({1'b0, idx});
                     sine_value = qval;
                 end
 
                 2'b01: begin
-                    qval = sin_quarter(4'd15 - idx);
+                    qval = sin_quarter_ext(5'd16 - {1'b0, idx});
                     sine_value = qval;
                 end
 
                 2'b10: begin
-                    qval = sin_quarter(idx);
-                    sine_value = 8'd256 - qval;
+                    qval = sin_quarter_ext({1'b0, idx});
+                    invval = 9'd256 - {1'b0, qval};
+                    sine_value = invval[7:0];
                 end
 
                 default: begin
-                    qval = sin_quarter(4'd15 - idx);
-                    sine_value = 8'd256 - qval;
+                    qval = sin_quarter_ext(5'd16 - {1'b0, idx});
+                    invval = 9'd256 - {1'b0, qval};
+                    sine_value = invval[7:0];
                 end
             endcase
         end
@@ -80,14 +84,14 @@ module sine_cos_lut (
                 tan_value = 8'd4;
             else begin
                 case (idx)
-                    4'd0:  tan_value = p[4] ? 8'd1 : 8'd128;
-                    4'd1:  tan_value = p[4] ? 8'd4 : 8'd140;
-                    4'd2:  tan_value = p[4] ? 8'd8 : 8'd153;
-                    4'd3:  tan_value = p[4] ? 8'd16 : 8'd166;
-                    4'd4:  tan_value = p[4] ? 8'd32 : 8'd181;
-                    4'd5:  tan_value = p[4] ? 8'd48 : 8'd197;
-                    4'd6:  tan_value = p[4] ? 8'd70 : 8'd216;
-                    4'd7:  tan_value = p[4] ? 8'd96 : 8'd235;
+                    4'd0:  tan_value = p[4] ? 8'd1   : 8'd128;
+                    4'd1:  tan_value = p[4] ? 8'd4   : 8'd140;
+                    4'd2:  tan_value = p[4] ? 8'd8   : 8'd153;
+                    4'd3:  tan_value = p[4] ? 8'd16  : 8'd166;
+                    4'd4:  tan_value = p[4] ? 8'd32  : 8'd181;
+                    4'd5:  tan_value = p[4] ? 8'd48  : 8'd197;
+                    4'd6:  tan_value = p[4] ? 8'd70  : 8'd216;
+                    4'd7:  tan_value = p[4] ? 8'd96  : 8'd235;
                     4'd8:  tan_value = p[4] ? 8'd128 : 8'd255;
                     4'd9:  tan_value = p[4] ? 8'd160 : 8'd235;
                     4'd10: tan_value = p[4] ? 8'd186 : 8'd216;

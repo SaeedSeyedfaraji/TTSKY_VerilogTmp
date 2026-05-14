@@ -33,7 +33,6 @@ module tt_um_polytrig_core (
     wire [7:0] cos_static;
     wire [7:0] tan_static;
     wire [7:0] cot_static;
-
     wire [7:0] nco_sin;
     wire [7:0] nco_cos;
 
@@ -82,10 +81,10 @@ module tt_um_polytrig_core (
             delta = $signed({2'b00, x}) - 10'sd128;
 
             case (amp)
-                2'b00: scaled = delta;                    // 100%
-                2'b01: scaled = (delta >>> 1) + (delta >>> 2); // 75%
-                2'b10: scaled = delta >>> 1;              // 50%
-                default: scaled = delta >>> 2;            // 25%
+                2'b00: scaled = delta;
+                2'b01: scaled = (delta >>> 1) + (delta >>> 2);
+                2'b10: scaled = delta >>> 1;
+                default: scaled = delta >>> 2;
             endcase
 
             scaled = scaled + 10'sd128;
@@ -101,16 +100,13 @@ module tt_um_polytrig_core (
 
     function [7:0] triangle_wave;
         input [5:0] phase;
-        reg [5:0] p;
         begin
-            p = phase;
-
-            if (p < 6'd16)
-                triangle_wave = 8'd128 + (p << 3);
-            else if (p < 6'd48)
-                triangle_wave = 8'd255 - ((p - 6'd16) << 3);
+            if (phase < 6'd16)
+                triangle_wave = 8'd128 + {phase[4:0], 3'b000};
+            else if (phase < 6'd48)
+                triangle_wave = 8'd255 - {(phase - 6'd16), 3'b000};
             else
-                triangle_wave = 8'd1 + ((p - 6'd48) << 3);
+                triangle_wave = 8'd1 + {(phase - 6'd48), 3'b000};
         end
     endfunction
 
@@ -132,6 +128,7 @@ module tt_um_polytrig_core (
         input [7:0] x;
         reg signed [9:0] delta;
         reg [8:0] abs_delta;
+        reg [9:0] doubled;
         begin
             delta = $signed({2'b00, x}) - 10'sd128;
 
@@ -140,10 +137,12 @@ module tt_um_polytrig_core (
             else
                 abs_delta = delta;
 
-            if ((abs_delta << 1) > 9'd255)
+            doubled = {1'b0, abs_delta} << 1;
+
+            if (doubled > 10'd255)
                 rectified_sine = 8'd255;
             else
-                rectified_sine = (abs_delta << 1);
+                rectified_sine = doubled[7:0];
         end
     endfunction
 
@@ -198,7 +197,7 @@ module tt_um_polytrig_core (
             end
 
             default: begin
-                out_a = value;
+                out_a = {2'b00, value};
                 out_b = {nco_waveform, nco_amp, value[3:0]};
             end
         endcase
