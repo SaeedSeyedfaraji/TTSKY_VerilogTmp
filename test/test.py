@@ -6,59 +6,52 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, Timer
 
 
-async def apply_and_check(dut, phase, mode, expected, name, tolerance=0):
+async def apply_and_check(dut, phase, expected_sin, expected_cos, name, tolerance=0):
     """
-    Apply one sine/cosine transaction and check result.
+    New interface:
 
-    Interface:
-      ui_in      = phase
-      uio_in[0] = start
-      uio_in[1] = mode
-                  0 = sine
-                  1 = cosine
+      ui_in[7:0]   = phase
+      uo_out[7:0]  = sine output
+      uio_out[7:0] = cosine output
 
-      uo_out     = result
-      uio_out[0] = valid/done
+    No start.
+    No mode.
+    No done.
     """
 
     dut._log.info(
-        f"Test {name}: phase={phase}, mode={mode}, "
-        f"expected={expected}, tolerance={tolerance}"
+        f"Test {name}: phase={phase}, "
+        f"expected_sin={expected_sin}, expected_cos={expected_cos}, "
+        f"tolerance={tolerance}"
     )
 
     dut.ui_in.value = phase
-    dut.uio_in.value = (mode << 1) | 1  # start=1
-
-    await ClockCycles(dut.clk, 5)
-    await Timer(500, unit="ns")
-
-    actual = int(dut.uo_out.value)
-
-    assert abs(actual - expected) <= tolerance, (
-        f"{name} failed: phase={phase}, mode={mode}, "
-        f"expected={expected} ± {tolerance}, got={actual}"
-    )
-
-    assert (int(dut.uio_out.value) & 1) == 1
-
-    # Deassert start
     dut.uio_in.value = 0
 
-    await ClockCycles(dut.clk, 5)
-    await Timer(500, unit="ns")
+    await ClockCycles(dut.clk, 2)
+    await Timer(100, unit="ns")
 
-    assert (int(dut.uio_out.value) & 1) == 0
+    actual_sin = int(dut.uo_out.value)
+    actual_cos = int(dut.uio_out.value)
+
+    assert abs(actual_sin - expected_sin) <= tolerance, (
+        f"{name} sine failed: phase={phase}, "
+        f"expected={expected_sin} ± {tolerance}, got={actual_sin}"
+    )
+
+    assert abs(actual_cos - expected_cos) <= tolerance, (
+        f"{name} cosine failed: phase={phase}, "
+        f"expected={expected_cos} ± {tolerance}, got={actual_cos}"
+    )
 
 
 @cocotb.test()
 async def test_project(dut):
-    dut._log.info("Start PolyTrig interpolated sine/cosine LUT test")
+    dut._log.info("Start PolyTrig simultaneous sine/cosine LUT test")
 
-    # 100 MHz clock
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
-    # Reset
     dut.ena.value = 1
     dut.ui_in.value = 0
     dut.uio_in.value = 0
@@ -69,56 +62,74 @@ async def test_project(dut):
     dut.rst_n.value = 1
 
     await ClockCycles(dut.clk, 5)
-    await Timer(500, unit="ns")
+    await Timer(100, unit="ns")
 
-    # -------------------------------------------------
-    # Sine key points
-    # phase 0   ->   0° -> sin = 0   -> output 128
-    # phase 64  ->  90° -> sin = +1  -> output 255
-    # phase 128 -> 180° -> sin = 0   -> output 128
-    # phase 192 -> 270° -> sin = -1  -> output 1
-    # -------------------------------------------------
+    # phase 0:
+    # sin(0) = 0, cos(0) = +1
+    await apply_and_check(
+        dut,
+        phase=0,
+        expected_sin=128,
+        expected_cos=255,
+        name="0 deg"
+    )
 
-    await apply_and_check(dut, phase=0,   mode=0, expected=128, name="sin 0 deg")
-    await apply_and_check(dut, phase=64,  mode=0, expected=255, name="sin 90 deg")
-    await apply_and_check(dut, phase=128, mode=0, expected=128, name="sin 180 deg")
-    await apply_and_check(dut, phase=192, mode=0, expected=1,   name="sin 270 deg")
+    # phase 64:
+    # sin(90) = +1, cos(90) = 0
+    await apply_and_check(
+        dut,
+        phase=64,
+        expected_sin=255,
+        expected_cos=128,
+        name="90 deg"
+    )
 
-    # -------------------------------------------------
-    # Sine non-trivial interpolation points
-    #
-    # phase 21 ≈ 30°
-    # phase 32 = 45°
-    # phase 43 ≈ 60°
-    #
-    # Expected values use unsigned sine mapping:
-    #
-    #   output = 128 + round(127 * sin(angle))
-    # -------------------------------------------------
+    # phase 128:
+    # sin(180) = 0, cos(180) = -1
+    await apply_and_check(
+        dut,
+        phase=128,
+        expected_sin=128,
+        expected_cos=1,
+        name="180 deg"
+    )
 
-    await apply_and_check(dut, phase=21, mode=0, expected=191, name="sin approx 30 deg", tolerance=3)
-    await apply_and_check(dut, phase=32, mode=0, expected=218, name="sin 45 deg",        tolerance=3)
-    await apply_and_check(dut, phase=43, mode=0, expected=238, name="sin approx 60 deg", tolerance=3)
+    # phase 192:
+    # sin(270) = -1, cos(270) = 0
+    await apply_and_check(
+        dut,
+        phase=192,
+        expected_sin=1,
+        expected_cos=128,
+        name="270 deg"
+    )
 
-    # -------------------------------------------------
-    # Cosine key points
-    # cos(x) = sin(x + 90°)
-    #
-    # phase 0   ->   0° -> cos = +1  -> output 255
-    # phase 64  ->  90° -> cos = 0   -> output 128
-    # phase 128 -> 180° -> cos = -1  -> output 1
-    # phase 192 -> 270° -> cos = 0   -> output 128
-    # -------------------------------------------------
+    # approx 30 deg
+    await apply_and_check(
+        dut,
+        phase=21,
+        expected_sin=191,
+        expected_cos=238,
+        name="approx 30 deg",
+        tolerance=3
+    )
 
-    await apply_and_check(dut, phase=0,   mode=1, expected=255, name="cos 0 deg")
-    await apply_and_check(dut, phase=64,  mode=1, expected=128, name="cos 90 deg")
-    await apply_and_check(dut, phase=128, mode=1, expected=1,   name="cos 180 deg")
-    await apply_and_check(dut, phase=192, mode=1, expected=128, name="cos 270 deg")
+    # 45 deg
+    await apply_and_check(
+        dut,
+        phase=32,
+        expected_sin=218,
+        expected_cos=218,
+        name="45 deg",
+        tolerance=3
+    )
 
-    # -------------------------------------------------
-    # Cosine non-trivial interpolation points
-    # -------------------------------------------------
-
-    await apply_and_check(dut, phase=21, mode=1, expected=238, name="cos approx 30 deg", tolerance=3)
-    await apply_and_check(dut, phase=32, mode=1, expected=218, name="cos 45 deg",        tolerance=3)
-    await apply_and_check(dut, phase=43, mode=1, expected=191, name="cos approx 60 deg", tolerance=3)
+    # approx 60 deg
+    await apply_and_check(
+        dut,
+        phase=43,
+        expected_sin=238,
+        expected_cos=191,
+        name="approx 60 deg",
+        tolerance=3
+    )
