@@ -5,29 +5,6 @@
 
 `default_nettype none
 
-// ============================================================
-// TinyTapeout PolyTrig Core
-// ------------------------------------------------------------
-// ui_in[7:0]   = phase angle input
-// uo_out[7:0]  = sine output
-// uio_out[7:0] = cosine output
-//
-// Output format:
-//   0   = -1
-//   128 =  0
-//   255 = +1
-//
-// Phase format:
-//   0   =   0 degree
-//   64  =  90 degree
-//   128 = 180 degree
-//   192 = 270 degree
-//
-// Cosine is generated as:
-//   cos(x) = sin(x + 90 degree)
-//          = sin(x + 64 phase counts)
-// ============================================================
-
 module tt_um_polytrig_core (
     input  wire [7:0] ui_in,
     output wire [7:0] uo_out,
@@ -39,25 +16,49 @@ module tt_um_polytrig_core (
     input  wire       rst_n
 );
 
+  wire       func_mode;
+  wire [7:0] phase;
+
   wire [7:0] sin_out;
   wire [7:0] cos_out;
+  wire [7:0] tan_out;
+  wire [7:0] cot_out;
+
+  assign func_mode = ui_in[7];
+
+  // 7-bit phase expanded to 8-bit phase.
+  // ui_in[6:0] = angle, ui_in[7] = mode.
+  assign phase = {ui_in[6:0], 1'b0};
 
   sine_lut_core sin_core (
-      .phase  (ui_in),
+      .phase  (phase),
       .result (sin_out)
   );
 
   sine_lut_core cos_core (
-      .phase  (ui_in + 8'd64),
+      .phase  (phase + 8'd64),
       .result (cos_out)
   );
 
-  assign uo_out  = sin_out;
-  assign uio_out = cos_out;
+  tan_lut_core tan_core (
+      .phase  (phase),
+      .result (tan_out)
+  );
 
-  // All uio pins are outputs now, carrying cosine.
+  tan_lut_core cot_core (
+      .phase  (8'd64 - phase),
+      .result (cot_out)
+  );
+
+  // mode 0: sine / cosine
+  // mode 1: tangent / cotangent
+  assign uo_out  = func_mode ? tan_out : sin_out;
+  assign uio_out = func_mode ? cot_out : cos_out;
+
   assign uio_oe = 8'hFF;
 
   wire _unused = &{ena, clk, rst_n, uio_in, 1'b0};
 
 endmodule
+
+`default_nettype wire
