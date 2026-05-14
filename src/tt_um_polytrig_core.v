@@ -45,8 +45,8 @@ module tt_um_polytrig_core (
       .result (tan_out)
   );
 
-  tan_lut_core cot_core (
-      .phase  (8'd64 - phase),
+    tan_lut_core cot_core (
+      .phase  (phase + 8'd64),
       .result (cot_out)
   );
 
