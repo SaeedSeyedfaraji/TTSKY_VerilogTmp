@@ -1,3 +1,5 @@
+`default_nettype none
+
 module sine_lut_core (
     input  wire [7:0] phase,
     output reg  [7:0] result
@@ -6,17 +8,8 @@ module sine_lut_core (
     reg [1:0] quadrant;
     reg [5:0] index;
     reg [5:0] quarter_pos;
-
-    reg [3:0] seg_index;
-    reg [1:0] frac;
-
-    reg [6:0] y0;
-    reg [6:0] y1;
-    reg [6:0] delta;
-    reg [6:0] interp_step;
     reg [6:0] mag;
-
-    reg negative;
+    reg       negative;
 
     always @(*) begin
         quadrant = phase[7:6];
@@ -46,45 +39,72 @@ module sine_lut_core (
     end
 
     always @(*) begin
-        seg_index = quarter_pos[5:2];
-        frac      = quarter_pos[1:0];
-    end
-
-    always @(*) begin
-        case (seg_index)
-            4'd0:  begin y0 = 7'd0;   y1 = 7'd12;  end
-            4'd1:  begin y0 = 7'd12;  y1 = 7'd25;  end
-            4'd2:  begin y0 = 7'd25;  y1 = 7'd37;  end
-            4'd3:  begin y0 = 7'd37;  y1 = 7'd49;  end
-            4'd4:  begin y0 = 7'd49;  y1 = 7'd60;  end
-            4'd5:  begin y0 = 7'd60;  y1 = 7'd70;  end
-            4'd6:  begin y0 = 7'd70;  y1 = 7'd80;  end
-            4'd7:  begin y0 = 7'd80;  y1 = 7'd90;  end
-            4'd8:  begin y0 = 7'd90;  y1 = 7'd98;  end
-            4'd9:  begin y0 = 7'd98;  y1 = 7'd106; end
-            4'd10: begin y0 = 7'd106; y1 = 7'd113; end
-            4'd11: begin y0 = 7'd113; y1 = 7'd117; end
-            4'd12: begin y0 = 7'd117; y1 = 7'd122; end
-            4'd13: begin y0 = 7'd122; y1 = 7'd125; end
-            4'd14: begin y0 = 7'd125; y1 = 7'd127; end
-            default: begin y0 = 7'd127; y1 = 7'd127; end
+        case (quarter_pos)
+            6'd0:  mag = 7'd0;
+            6'd1:  mag = 7'd3;
+            6'd2:  mag = 7'd6;
+            6'd3:  mag = 7'd9;
+            6'd4:  mag = 7'd12;
+            6'd5:  mag = 7'd16;
+            6'd6:  mag = 7'd19;
+            6'd7:  mag = 7'd22;
+            6'd8:  mag = 7'd25;
+            6'd9:  mag = 7'd28;
+            6'd10: mag = 7'd31;
+            6'd11: mag = 7'd34;
+            6'd12: mag = 7'd37;
+            6'd13: mag = 7'd40;
+            6'd14: mag = 7'd43;
+            6'd15: mag = 7'd46;
+            6'd16: mag = 7'd49;
+            6'd17: mag = 7'd52;
+            6'd18: mag = 7'd55;
+            6'd19: mag = 7'd58;
+            6'd20: mag = 7'd61;
+            6'd21: mag = 7'd64;
+            6'd22: mag = 7'd67;
+            6'd23: mag = 7'd70;
+            6'd24: mag = 7'd73;
+            6'd25: mag = 7'd75;
+            6'd26: mag = 7'd78;
+            6'd27: mag = 7'd81;
+            6'd28: mag = 7'd83;
+            6'd29: mag = 7'd86;
+            6'd30: mag = 7'd88;
+            6'd31: mag = 7'd91;
+            6'd32: mag = 7'd93;
+            6'd33: mag = 7'd95;
+            6'd34: mag = 7'd98;
+            6'd35: mag = 7'd100;
+            6'd36: mag = 7'd102;
+            6'd37: mag = 7'd104;
+            6'd38: mag = 7'd106;
+            6'd39: mag = 7'd108;
+            6'd40: mag = 7'd110;
+            6'd41: mag = 7'd112;
+            6'd42: mag = 7'd113;
+            6'd43: mag = 7'd115;
+            6'd44: mag = 7'd117;
+            6'd45: mag = 7'd118;
+            6'd46: mag = 7'd120;
+            6'd47: mag = 7'd121;
+            6'd48: mag = 7'd122;
+            6'd49: mag = 7'd123;
+            6'd50: mag = 7'd124;
+            6'd51: mag = 7'd125;
+            6'd52: mag = 7'd126;
+            6'd53: mag = 7'd126;
+            6'd54: mag = 7'd127;
+            6'd55: mag = 7'd127;
+            6'd56: mag = 7'd127;
+            6'd57: mag = 7'd127;
+            6'd58: mag = 7'd127;
+            6'd59: mag = 7'd127;
+            6'd60: mag = 7'd127;
+            6'd61: mag = 7'd127;
+            6'd62: mag = 7'd127;
+            default: mag = 7'd127;
         endcase
-    end
-
-    always @(*) begin
-        delta = y1 - y0;
-
-        case (frac)
-            2'd0:    interp_step = 7'd0;
-            2'd1:    interp_step = delta >> 2;
-            2'd2:    interp_step = delta >> 1;
-            default: interp_step = (delta >> 1) + (delta >> 2);
-        endcase
-
-        if (quarter_pos == 6'd63)
-            mag = 7'd127;
-        else
-            mag = y0 + interp_step;
     end
 
     always @(*) begin
@@ -95,3 +115,5 @@ module sine_lut_core (
     end
 
 endmodule
+
+`default_nettype wire
