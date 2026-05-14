@@ -6,18 +6,17 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, Timer
 
 
-def phase_input(mode, phase7):
-    return ((mode & 1) << 7) | (phase7 & 0x7F)
+def input_word(mode, value):
+    return ((mode & 0x3) << 6) | (value & 0x3F)
 
 
-async def apply_and_check(dut, mode, phase7, expected_a, expected_b, name, tolerance=0):
+async def apply_and_check(dut, mode, value, expected_a, expected_b, name, tolerance=0):
     dut._log.info(
-        f"Test {name}: mode={mode}, phase7={phase7}, "
-        f"expected_a={expected_a}, expected_b={expected_b}, "
-        f"tolerance={tolerance}"
+        f"Test {name}: mode={mode}, value={value}, "
+        f"expected_a={expected_a}, expected_b={expected_b}, tolerance={tolerance}"
     )
 
-    dut.ui_in.value = phase_input(mode, phase7)
+    dut.ui_in.value = input_word(mode, value)
     dut.uio_in.value = 0
 
     await ClockCycles(dut.clk, 2)
@@ -37,7 +36,7 @@ async def apply_and_check(dut, mode, phase7, expected_a, expected_b, name, toler
 
 @cocotb.test()
 async def test_project(dut):
-    dut._log.info("Start PolyTrig sin/cos and tan/cot LUT test")
+    dut._log.info("Start PolyTrig static + NCO test")
 
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
@@ -52,19 +51,53 @@ async def test_project(dut):
     await ClockCycles(dut.clk, 5)
     await Timer(100, unit="ns")
 
-    # Mode 0: sine / cosine
-    await apply_and_check(dut, 0, 0,   128, 255, "sin/cos 0 deg")
-    await apply_and_check(dut, 0, 32,  255, 128, "sin/cos 90 deg")
-    await apply_and_check(dut, 0, 64,  128, 1,   "sin/cos 180 deg")
-    await apply_and_check(dut, 0, 96,  1,   128, "sin/cos 270 deg")
+    # mode 00: static sine / cosine
+    await apply_and_check(dut, 0, 0,  128, 255, "sin/cos 0 deg")
+    await apply_and_check(dut, 0, 16, 255, 128, "sin/cos 90 deg")
+    await apply_and_check(dut, 0, 32, 128, 1,   "sin/cos 180 deg")
+    await apply_and_check(dut, 0, 48, 1,   128, "sin/cos 270 deg")
 
-    await apply_and_check(dut, 0, 11, 195, 240, "sin/cos approx 30 deg", tolerance=3)
-    await apply_and_check(dut, 0, 16, 221, 221, "sin/cos 45 deg", tolerance=3)
-    await apply_and_check(dut, 0, 21, 241, 195, "sin/cos approx 60 deg", tolerance=3)
+    await apply_and_check(dut, 0, 8,  221, 221, "sin/cos 45 deg", tolerance=3)
 
-    # Mode 1: tangent / cotangent
-    await apply_and_check(dut, 1, 0,   128, 255, "tan/cot 0 deg")
-    await apply_and_check(dut, 1, 16,  255, 252, "tan/cot 45 deg", tolerance=3)
-    await apply_and_check(dut, 1, 32,  1,   128, "tan/cot 90 deg")
-    await apply_and_check(dut, 1, 64,  128, 255, "tan/cot 180 deg")
-    await apply_and_check(dut, 1, 48,  1,   1,   "tan/cot 135 deg",tolerance=3)
+    # mode 01: static tangent / cotangent
+    await apply_and_check(dut, 1, 0,  128, 255, "tan/cot 0 deg")
+    await apply_and_check(dut, 1, 8,  255, 252, "tan/cot 45 deg", tolerance=3)
+    await apply_and_check(dut, 1, 16, 1,   128, "tan/cot 90 deg")
+    await apply_and_check(dut, 1, 24, 4,   4,   "tan/cot 135 deg", tolerance=3)
+
+    # mode 10: NCO sine / cosine
+    # value = 1 -> step = 4 phase counts per clock
+    dut.ui_in.value = input_word(2, 1)
+    dut.uio_in.value = 0
+
+    await ClockCycles(dut.clk, 16)
+    await Timer(100, unit="ns")
+
+    # After 16 cycles with step 4:
+    # phase = 64 -> sin = +1, cos = 0
+    actual_sin = int(dut.uo_out.value)
+    actual_cos = int(dut.uio_out.value)
+
+    assert abs(actual_sin - 255) <= 3, (
+        f"NCO 90 deg sine failed: expected 255 ± 3, got {actual_sin}"
+    )
+
+    assert abs(actual_cos - 128) <= 3, (
+        f"NCO 90 deg cosine failed: expected 128 ± 3, got {actual_cos}"
+    )
+
+    await ClockCycles(dut.clk, 16)
+    await Timer(100, unit="ns")
+
+    # After another 16 cycles:
+    # phase = 128 -> sin = 0, cos = -1
+    actual_sin = int(dut.uo_out.value)
+    actual_cos = int(dut.uio_out.value)
+
+    assert abs(actual_sin - 128) <= 3, (
+        f"NCO 180 deg sine failed: expected 128 ± 3, got {actual_sin}"
+    )
+
+    assert abs(actual_cos - 1) <= 3, (
+        f"NCO 180 deg cosine failed: expected 1 ± 3, got {actual_cos}"
+    )
