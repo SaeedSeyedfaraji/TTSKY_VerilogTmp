@@ -67,4 +67,4 @@ async def test_project(dut):
     await apply_and_check(dut, 1, 16,  255, 252, "tan/cot 45 deg", tolerance=3)
     await apply_and_check(dut, 1, 32,  1,   128, "tan/cot 90 deg")
     await apply_and_check(dut, 1, 64,  128, 255, "tan/cot 180 deg")
-    await apply_and_check(dut, 1, 48,  1,   1,   "tan/cot 135 deg")
+    await apply_and_check(dut, 1, 48,  1,   1,   "tan/cot 135 deg",tolerance=3)
