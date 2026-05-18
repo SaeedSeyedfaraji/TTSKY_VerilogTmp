@@ -102,17 +102,14 @@ module tt_um_polytrig_core (
 
     function [7:0] triangle_wave;
         input [5:0] phase;
-        reg [8:0] tmp;
         begin
             if (phase < 6'd16) begin
-                tmp = 9'd128 + {1'b0, phase[4:0], 3'b000};
+                triangle_wave = 8'd128 + {phase[3:0], 3'b000};
             end else if (phase < 6'd48) begin
-                tmp = 9'd255 - {1'b0, (phase - 6'd16), 3'b000};
+                triangle_wave = 8'd255 - {(phase[4:0] - 5'd16), 3'b000};
             end else begin
-                tmp = 9'd1 + {1'b0, (phase - 6'd48), 3'b000};
+                triangle_wave = 8'd1 + {(phase[4:0] - 5'd16), 3'b000};
             end
-
-            triangle_wave = tmp[7:0];
         end
     endfunction
 
@@ -132,25 +129,17 @@ module tt_um_polytrig_core (
 
     function [7:0] rectified_sine;
         input [7:0] x;
-        reg signed [9:0] delta;
-        reg signed [10:0] abs_tmp;
-        reg [9:0] abs_delta;
-        reg [10:0] doubled;
+        reg [7:0] abs_delta;
         begin
-            delta = $signed({2'b00, x}) - 10'sd128;
-
-            if (delta < 0)
-                abs_tmp = -$signed({delta[9], delta});
+            if (x >= 8'd128)
+                abs_delta = x - 8'd128;
             else
-                abs_tmp = $signed({delta[9], delta});
+                abs_delta = 8'd128 - x;
 
-            abs_delta = abs_tmp[9:0];
-            doubled = {1'b0, abs_delta} << 1;
-
-            if (doubled > 11'd255)
+            if (abs_delta > 8'd127)
                 rectified_sine = 8'd255;
             else
-                rectified_sine = doubled[7:0];
+                rectified_sine = abs_delta << 1;
         end
     endfunction
 

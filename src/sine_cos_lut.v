@@ -37,7 +37,7 @@ module sine_cos_lut (
         reg [1:0] quadrant;
         reg [3:0] idx;
         reg [7:0] qval;
-        reg [8:0] invval;
+        reg [7:0] invval;
         begin
             quadrant = p[5:4];
             idx = p[3:0];
@@ -55,14 +55,14 @@ module sine_cos_lut (
 
                 2'b10: begin
                     qval = sin_quarter_ext({1'b0, idx});
-                    invval = 9'd256 - {1'b0, qval};
-                    sine_value = invval[7:0];
+                    invval = 8'd0 - qval;
+                    sine_value = invval;
                 end
 
                 default: begin
                     qval = sin_quarter_ext(5'd16 - {1'b0, idx});
-                    invval = 9'd256 - {1'b0, qval};
-                    sine_value = invval[7:0];
+                    invval = 8'd0 - qval;
+                    sine_value = invval;
                 end
             endcase
         end
