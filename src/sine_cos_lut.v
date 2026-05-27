@@ -6,6 +6,9 @@ module sine_cos_lut (
     output reg  [7:0] out
 );
 
+    // Quarter-wave sine LUT.
+    // Output format is unsigned offset-binary:
+    // 128 = zero/mid-scale, 255 = positive peak, 1 = negative peak.
     function [7:0] sin_quarter_ext;
         input [4:0] idx;
         begin
@@ -37,10 +40,9 @@ module sine_cos_lut (
         reg [1:0] quadrant;
         reg [3:0] idx;
         reg [7:0] qval;
-        reg [7:0] invval;
         begin
             quadrant = p[5:4];
-            idx = p[3:0];
+            idx      = p[3:0];
 
             case (quadrant)
                 2'b00: begin
@@ -55,19 +57,19 @@ module sine_cos_lut (
 
                 2'b10: begin
                     qval = sin_quarter_ext({1'b0, idx});
-                    invval = 8'd0 - qval;
-                    sine_value = invval;
+                    sine_value = 8'd0 - qval;
                 end
 
                 default: begin
                     qval = sin_quarter_ext(5'd16 - {1'b0, idx});
-                    invval = 8'd0 - qval;
-                    sine_value = invval;
+                    sine_value = 8'd0 - qval;
                 end
             endcase
         end
     endfunction
 
+    // Compact tangent approximation LUT.
+    // Values are saturated/limited near discontinuities.
     function [7:0] tan_value;
         input [5:0] p;
         reg [3:0] idx;
@@ -105,6 +107,8 @@ module sine_cos_lut (
         end
     endfunction
 
+    // Compact cotangent approximation LUT.
+    // Values are saturated/limited near discontinuities.
     function [7:0] cot_value;
         input [5:0] p;
         reg [3:0] idx;

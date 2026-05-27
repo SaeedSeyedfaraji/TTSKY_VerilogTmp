@@ -1,42 +1,179 @@
-![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
+![](../../workflows/gds/badge.svg)
+![](../../workflows/docs/badge.svg)
+![](../../workflows/test/badge.svg)
+![](../../workflows/fpga/badge.svg)
 
-# Tiny Tapeout Verilog Project Template
+# PolyTrig – TinyTapeout Digital Waveform Synthesis Core
 
-- [Read the documentation for project](docs/info.md)
+PolyTrig is a TinyTapeout-compatible digital waveform synthesis core designed
+for compact ASIC implementation using lookup-table (LUT) based waveform
+generation techniques.
 
-## What is Tiny Tapeout?
+The project explores compact digital signal synthesis using quarter-wave LUT
+optimization, waveform reconstruction, phase manipulation, and ASIC-oriented
+digital design methods.
 
-Tiny Tapeout is an educational project that aims to make it easier and cheaper than ever to get your digital and analog designs manufactured on a real chip.
+---
 
-To learn more and get started, visit https://tinytapeout.com.
+## Features
 
-## Set up your Verilog project
+- 8-bit TinyTapeout-compatible interface
+- LUT-based trigonometric waveform generation
+- Sine waveform output
+- Cosine waveform output
+- Tangent waveform approximation
+- Cotangent waveform approximation
+- NCO (Numerically Controlled Oscillator) mode
+- Triangle waveform generation
+- Sawtooth waveform generation
+- Square waveform generation
+- Rectified sine generation
+- Quarter-wave LUT optimization
+- Phase-offset waveform synthesis
+- Runtime waveform selection
+- Runtime amplitude scaling
+- Cocotb verification environment
+- RTL and Gate-Level simulation support
+---
 
-1. Add your Verilog files to the `src` folder.
-2. Edit the [info.yaml](info.yaml) and update information about your project, paying special attention to the `source_files` and `top_module` properties. If you are upgrading an existing Tiny Tapeout project, check out our [online info.yaml migration tool](https://tinytapeout.github.io/tt-yaml-upgrade-tool/).
-3. Edit [docs/info.md](docs/info.md) and add a description of your project.
-4. Adapt the testbench to your design. See [test/README.md](test/README.md) for more information.
+## Architecture Overview
 
-The GitHub action will automatically build the ASIC files using [LibreLane](https://www.zerotoasiccourse.com/terminology/librelane/).
+The waveform generation engine operates using:
 
-## Enable GitHub actions to build the results page
+1. Phase decoding
+2. Quadrant extraction
+3. LUT address mapping
+4. Symmetry reconstruction
+5. Signed waveform generation
+6. Output remapping
 
-- [Enabling GitHub Pages](https://tinytapeout.com/faq/#my-github-action-is-failing-on-the-pages-part)
+Instead of storing a full waveform, only a quarter-wave lookup table is used,
+significantly reducing memory usage while reconstructing the complete waveform
+through symmetry operations.
 
-## Resources
+Cosine generation is implemented using phase offset techniques.
 
-- [FAQ](https://tinytapeout.com/faq/)
-- [Digital design lessons](https://tinytapeout.com/digital_design/)
-- [Learn how semiconductors work](https://tinytapeout.com/siliwiz/)
-- [Join the community](https://tinytapeout.com/discord)
-- [Build your design locally](https://www.tinytapeout.com/guides/local-hardening/)
+---
 
-## What next?
+## TinyTapeout Interface
 
-- [Submit your design to the next shuttle](https://app.tinytapeout.com/).
-- Edit [this README](README.md) and explain your design, how it works, and how to test it.
-- Share your project on your social network of choice:
-  - LinkedIn [#tinytapeout](https://www.linkedin.com/search/results/content/?keywords=%23tinytapeout) [@TinyTapeout](https://www.linkedin.com/company/100708654/)
-  - Mastodon [#tinytapeout](https://chaos.social/tags/tinytapeout) [@matthewvenn](https://chaos.social/@matthewvenn)
-  - X (formerly Twitter) [#tinytapeout](https://twitter.com/hashtag/tinytapeout) [@tinytapeout](https://twitter.com/tinytapeout)
-  - Bluesky [@tinytapeout.com](https://bsky.app/profile/tinytapeout.com)
+| Signal | Description |
+|---|---|
+| `ui_in[7:0]` | Phase input / control input |
+| `uo_out[7:0]` | Generated waveform output |
+| `uio_in[7:0]` | Optional waveform configuration inputs |
+| `uio_out[7:0]` | Debug / auxiliary outputs |
+| `uio_oe[7:0]` | Bidirectional output enables |
+| `clk` | System clock |
+| `rst_n` | Active-low reset |
+| `ena` | Design enable |
+
+---
+
+## Repository Structure
+
+```text
+src/                RTL source files
+test/               Cocotb verification environment
+docs/               TinyTapeout documentation
+info.yaml           TinyTapeout project metadata
+```
+
+---
+
+## Running RTL Simulation
+
+```bash
+cd test
+make -B
+```
+
+---
+
+## Running Gate-Level Simulation
+
+After hardening:
+
+```bash
+cp ../runs/wokwi/results/final/verilog/gl/tt_um_polytrig_core.v gate_level_netlist.v
+```
+
+Then run:
+
+```bash
+make -B GATES=yes
+```
+
+---
+
+## Viewing Waveforms
+
+Using GTKWave:
+
+```bash
+gtkwave tb.fst tb.gtkw
+```
+
+Using Surfer:
+
+```bash
+surfer tb.fst
+```
+
+---
+
+## Verification Environment
+
+The project uses:
+
+- cocotb
+- Icarus Verilog
+- GTKWave
+- OpenLane / LibreLane
+- TinyTapeout ASIC flow
+
+for automated RTL and gate-level verification.
+
+---
+
+## Design Goals
+
+This project explores:
+
+- compact waveform synthesis
+- ASIC-friendly digital signal generation
+- LUT optimization methods
+- compact waveform generation architectures
+- open-source RTL-to-GDS flows
+
+---
+
+## Future Improvements
+
+Potential future extensions include:
+
+- DDS / NCO enhancements
+- additional waveform modes
+- configurable phase accumulation
+- higher precision LUTs
+- programmable amplitude scaling
+
+---
+
+## Documentation
+
+Additional project information can be found in:
+
+```text
+docs/info.md
+```
+
+---
+
+## TinyTapeout
+
+Tiny Tapeout is an educational open-source ASIC project enabling low-cost
+silicon fabrication for digital and analog designs.
+
+More information:
+https://tinytapeout.com

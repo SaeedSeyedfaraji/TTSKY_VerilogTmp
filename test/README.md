@@ -1,22 +1,59 @@
-# Sample testbench for a Tiny Tapeout project
+# PolyTrig Verification Environment
 
-This is a sample testbench for a Tiny Tapeout project. It uses [cocotb](https://docs.cocotb.org/en/stable/) to drive the DUT and check the outputs.
-See below to get started or for more information, check the [website](https://tinytapeout.com/hdl/testing/).
+This directory contains the cocotb-based verification environment for the
+PolyTrig TinyTapeout project.
 
-## Setting up
+The testbench verifies:
 
-1. Edit [Makefile](Makefile) and modify `PROJECT_SOURCES` to point to your Verilog files.
-2. Edit [tb.v](tb.v) and replace `tt_um_example` with your module name.
+- Static sine/cosine generation
+- Tangent/cotangent approximations
+- NCO waveform generation
+- Triangle waveform generation
+- Sawtooth waveform generation
+- Square waveform generation
+- Rectified waveform generation
+- Runtime amplitude scaling
 
-## How to run
+---
 
-To run the RTL simulation:
+## Simulation Flow
+
+The verification environment supports:
+
+- RTL simulation
+- Gate-level simulation
+- FST waveform dumping
+- GTKWave visualization
+- Cocotb automated verification
+
+---
+
+## Files
+
+| File | Description |
+|---|---|
+| `test.py` | Cocotb verification test |
+| `tb.v` | Verilog simulation wrapper |
+| `Makefile` | Simulation configuration |
+| `tb.gtkw` | GTKWave configuration |
+
+---
+
+## Running RTL Simulation
 
 ```sh
 make -B
 ```
 
-To run gatelevel simulation, first harden your project and copy `../runs/wokwi/results/final/verilog/gl/{your_module_name}.v` to `gate_level_netlist.v`.
+---
+
+## Running Gate-Level Simulation
+
+After hardening, copy the generated gate-level netlist:
+
+```sh
+cp ../runs/wokwi/results/final/verilog/gl/tt_um_polytrig_core.v gate_level_netlist.v
+```
 
 Then run:
 
@@ -24,24 +61,30 @@ Then run:
 make -B GATES=yes
 ```
 
-If you wish to save the waveform in VCD format instead of FST format, edit tb.v to use `$dumpfile("tb.vcd");` and then run:
+---
 
-```sh
-make -B FST=
-```
+## Waveform Visualization
 
-This will generate `tb.vcd` instead of `tb.fst`.
-
-## How to view the waveform file
-
-Using GTKWave
+Using GTKWave:
 
 ```sh
 gtkwave tb.fst tb.gtkw
 ```
 
-Using Surfer
+Using Surfer:
 
 ```sh
 surfer tb.fst
 ```
+
+---
+
+## Notes
+
+The verification flow uses:
+
+- cocotb
+- Icarus Verilog
+- GTKWave
+- TinyTapeout
+- OpenLane / LibreLane

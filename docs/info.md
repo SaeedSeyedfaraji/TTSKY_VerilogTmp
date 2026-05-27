@@ -1,31 +1,58 @@
-<!---
-
-This file is used to generate your project datasheet. Please fill in the information below and delete any unused
-sections.
-
-You can also include images in this folder and reference them in the markdown. Each image must be less than
-512 kb in size, and the combined size of all images must be less than 1 MB.
--->
-
 ## How it works
 
-This project implements an iterative trigonometric computation core based on Taylor series expansion. The design is intended for ASIC implementation using the Tiny Tapeout flow.
+PolyTrig is a TinyTapeout-compatible digital waveform synthesis core designed
+for compact ASIC implementation.
 
-The architecture is based on a controller and datapath structure. The controller manages the computation sequence and iteration flow, while the datapath performs the arithmetic operations required for sine and cosine evaluation using fixed-point arithmetic.
+The design generates multiple waveform types using lookup-table (LUT) based
+signal reconstruction techniques and phase manipulation methods.
 
-The current implementation contains the initial Tiny Tapeout wrapper and verification environment. The computational core will be integrated incrementally.
+Supported waveform modes include:
+
+- Sine
+- Cosine
+- Tangent approximation
+- Cotangent approximation
+- Triangle
+- Sawtooth
+- Square wave
+- Rectified sine
+- NCO-style waveform generation
+
+The architecture uses quarter-wave LUT optimization to reduce memory usage
+while reconstructing complete waveforms through symmetry operations and phase
+transformations.
+
+Waveform selection and runtime configuration are controlled through the
+TinyTapeout input interface.
+
+---
 
 ## How to test
 
-The project can be simulated using the cocotb-based verification environment provided in the `test` directory.
-Run the simulation using:
+The project includes a cocotb-based verification environment located in the
+`test` directory.
+
+Run RTL simulation using:
 
 ```sh
 cd test
-make
+make -B
+```
+
+Run gate-level simulation using:
+
+```sh
+make -B GATES=yes
+```
+
+Waveforms can be viewed using GTKWave:
+
+```sh
+gtkwave tb.fst tb.gtkw
+```
+
+---
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
-
-No external hardware is currently required.
+No external hardware is required.

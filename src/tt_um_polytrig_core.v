@@ -16,7 +16,7 @@ module tt_um_polytrig_core (
 
     wire [1:0] nco_waveform = uio_in[1:0];
     wire [1:0] nco_amp      = uio_in[3:2];
-    wire [3:0] unused_uio_in = uio_in[7:4];
+    wire [3:0] aux_uio_in   = uio_in[7:4];
 
     reg [5:0] nco_phase;
 
@@ -195,7 +195,7 @@ module tt_um_polytrig_core (
 
             default: begin
                 out_a = {2'b00, value};
-                out_b = {unused_uio_in, value[3:0]};
+                out_b = {aux_uio_in, value[3:0]};
             end
         endcase
     end

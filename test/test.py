@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: © 2024 Tiny Tapeout
+# PolyTrig cocotb verification testbench
 # SPDX-License-Identifier: Apache-2.0
 
 import cocotb
